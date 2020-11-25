@@ -32,6 +32,8 @@
 
 #include "libgeda_priv.h"
 
+#include "sab.h"
+
 /*! Basic string splitting delimiters */
 #define DELIMITERS ",; "
 
@@ -131,6 +133,9 @@ void s_slot_update_object (TOPLEVEL *toplevel, OBJECT *object)
   char* current_pin;  /* text from slotdef= to be made into pinnumber= */
   char* cptr;         /* char pointer pointing to pinnumbers in slotdef=#:#,#,# string */
 
+  sab_action_set* sab_set;/* the sab actions (if any) for this object */
+  gchar* cur_pinnum;
+
   /* For this particular graphic object (component instantiation) */
   /* get the slot number as a string */
   string = o_attrib_search_object_attribs_by_name (object, "slot", 0);
@@ -181,6 +186,13 @@ void s_slot_update_object (TOPLEVEL *toplevel, OBJECT *object)
     return;
   }
 
+  /* For SAB 'bypass' action we want the pin numbers to be automatically updated
+   * when the slot chages.
+   *
+   * Now that we are commited to changing the pins setup the SAB stuff so we
+   * can modify any bypass pins while we are here. */
+  sab_set=SabGetSet(object);
+
   /* loop on all pins found in slotdef= attribute */
   pin_counter = 1;  /* internal pin_counter */
   /* get current pinnumber= from slotdef= attrib */
@@ -199,9 +211,16 @@ void s_slot_update_object (TOPLEVEL *toplevel, OBJECT *object)
       g_list_free (attributes);
 
       if (o_pinnum_attrib != NULL) {
+      gchar* buf;
+        if(o_attrib_get_name_value(o_pinnum_attrib,NULL,&cur_pinnum)) {
+          SabUpdateBypassPin(sab_set,cur_pinnum,current_pin);
+          g_free(cur_pinnum);
+        }
+        /* The g_strdup_printf in the next line used to leak memory so I fixed it*/
         o_text_set_string (toplevel,
                            o_pinnum_attrib,
-                           g_strdup_printf ("pinnumber=%s", current_pin));
+                           (buf=g_strdup_printf ("pinnumber=%s", current_pin)));
+        g_free(buf);
       }
 
       pin_counter++;
@@ -212,5 +231,6 @@ void s_slot_update_object (TOPLEVEL *toplevel, OBJECT *object)
     current_pin = strtok (NULL, DELIMITERS);
   }
 
+  SabReleaseSet(sab_set,toplevel);
   g_free (slotdef);
 }
