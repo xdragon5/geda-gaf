@@ -219,7 +219,7 @@ void s_slot_update_object (TOPLEVEL *toplevel, OBJECT *object)
         /* The g_strdup_printf in the next line used to leak memory so I fixed it*/
         o_text_set_string (toplevel,
                            o_pinnum_attrib,
-                           (buf=g_strdup_printf ("pinnumber=%s", current_pin)));
+                           (buf = g_strdup_printf ("pinnumber=%s", current_pin)));
         g_free(buf);
       }
 
